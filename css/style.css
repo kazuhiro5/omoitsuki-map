@@ -208,7 +208,7 @@ button:not(:disabled):active, .chip:active, select:active {
 .add-memo {
   width: 100%; padding: 8px 12px; font: inherit; font-size: 16px; line-height: 1.5;
   color: var(--text); background: var(--bg); border: 1px solid var(--line);
-  border-radius: var(--radius-s); resize: vertical;
+  border-radius: var(--radius-s); resize: none; overflow-y: hidden; field-sizing: content; min-height: 56px;
 }
 .add-memo:focus {
   outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); background: var(--surface);
@@ -316,15 +316,16 @@ button:not(:disabled):active, .chip:active, select:active {
   max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* 行を1回押した時にすぐ下に伸びて出る「内容」の書き換え欄（task-board のアコーディオン） */
+/* 行を1回押した時にすぐ下に伸びて出る「内容」の書き換え欄（スクロールなしで全文がフルで見える） */
 .tb-memo-box {
   flex: 1 0 100%; min-width: 0; padding: 4px 12px 10px 42px;
   display: grid; gap: 6px;
 }
 .tb-memo-edit {
-  width: 100%; padding: 8px 10px; font: inherit; font-size: 15px; line-height: 1.55;
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 16px; line-height: 1.6;
   color: var(--text); background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius-s); resize: vertical; min-height: 68px;
+  border-radius: var(--radius-s); resize: none; overflow-y: hidden;
+  field-sizing: content; min-height: 56px;
 }
 .tb-memo-edit:focus {
   outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent);
@@ -397,7 +398,10 @@ button:not(:disabled):active, .chip:active, select:active {
   padding: 8px 10px; background: var(--bg); font-size: 16px; color: var(--text);
 }
 .field:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); background: var(--surface); }
-textarea.field { min-height: 76px; resize: vertical; line-height: 1.5; }
+textarea.field {
+  min-height: 56px; resize: none; overflow-y: hidden;
+  field-sizing: content; line-height: 1.6;
+}
 
 .pane-field { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
 .pane-field-label { font-size: 12px; font-weight: 600; color: var(--muted); }
@@ -445,11 +449,16 @@ textarea.field { min-height: 76px; resize: vertical; line-height: 1.5; }
 }
 
 @media (max-width: 840px) {
+  html, body { height: auto; min-height: 100%; }
   .page, .page.side-closed { grid-template-columns: 1fr; }
   .side, .side-rail { display: none !important; }
+  .work { overflow: visible; }
+  .list-pane { overflow-y: visible; }
+  .graph-pane { height: calc(100dvh - 190px); min-height: 360px; }
   .mobile-filters { display: flex; }
+  .tb-memo-box { padding-left: 12px; }
   .detail-pane {
-    position: fixed; inset: auto 0 0 0; width: 100vw; max-height: 68dvh;
-    border-radius: 14px 14px 0 0; border-bottom: 0;
+    position: fixed; inset: 0; width: 100vw; height: 100dvh; max-height: none;
+    border-radius: 0; border: 0;
   }
 }

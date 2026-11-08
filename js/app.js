@@ -67,6 +67,13 @@ function showToast(msg) {
   showToast._timer = setTimeout(() => { t.hidden = true; }, 2200);
 }
 
+// テキストエリアを文字の量に合わせて全文がフルで見える高さに広げる（スクロール不要にする）
+function autoFitTextarea(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.max(ta.scrollHeight, 56) + 'px';
+}
+
 // ---- 明るさ（テーマ） ----
 function initTheme() {
   const saved = localStorage.getItem('om.theme') || '';
@@ -263,22 +270,19 @@ function renderList() {
       showToast(`状態を「${next}」に変えました`);
     });
 
-    // 本体（1回押すとすぐ下に「内容」が伸びて開き、開いている行をもう一度押すと右の詳細ペインが開く）
+    // 本体（1回押すとすぐ下に「内容」が全文フルの高さで伸びて開き、開いている行をもう一度押すと閉じる）
     const bodyBtn = document.createElement('button');
     bodyBtn.type = 'button';
     bodyBtn.className = 'tb-body';
     bodyBtn.setAttribute('aria-expanded', String(isExpanded));
     bodyBtn.addEventListener('click', () => {
       if (expandedNodeId === n.id) {
-        openDetail(n.id);
+        expandedNodeId = null;
+        renderList();
         return;
       }
       expandedNodeId = n.id;
       renderList();
-      requestAnimationFrame(() => {
-        const ta = container.querySelector(`.tb-card[data-id="${CSS.escape(n.id)}"] .tb-memo-edit`);
-        if (ta) ta.focus();
-      });
     });
 
     const connected = links
@@ -314,18 +318,19 @@ function renderList() {
     card.appendChild(checkBtn);
     card.appendChild(bodyBtn);
 
-    // 1回押した時にすぐ下に開く「内容」書き換え欄
+    // 1回押した時にすぐ下に開く「内容」書き換え欄（スクロールなしで全文フル表示）
     if (isExpanded) {
       const memoBox = document.createElement('div');
       memoBox.className = 'tb-memo-box';
 
       const memoTa = document.createElement('textarea');
       memoTa.className = 'tb-memo-edit';
-      memoTa.rows = 3;
+      memoTa.rows = 1;
       memoTa.placeholder = '内容を書く（自動で保存されます）';
       memoTa.setAttribute('aria-label', '内容');
       memoTa.value = n.memo || '';
       memoTa.addEventListener('input', () => {
+        autoFitTextarea(memoTa);
         const val = memoTa.value;
         clearTimeout(inlineMemoTimer);
         inlineMemoTimer = setTimeout(() => {
@@ -335,7 +340,7 @@ function renderList() {
 
       const foot = document.createElement('div');
       foot.className = 'tb-memo-foot';
-      foot.innerHTML = '<span>内容は自動で保存されます（もう一度タイトルを押すと詳細・リンク編集）</span>';
+      foot.innerHTML = '<span>内容は自動で保存されます</span>';
       const moreBtn = document.createElement('button');
       moreBtn.type = 'button';
       moreBtn.className = 'tb-memo-more';
@@ -346,6 +351,7 @@ function renderList() {
       memoBox.appendChild(memoTa);
       memoBox.appendChild(foot);
       card.appendChild(memoBox);
+      requestAnimationFrame(() => autoFitTextarea(memoTa));
     }
 
     container.appendChild(card);
@@ -594,6 +600,11 @@ function openDetail(id) {
 
   renderDetailLinks(n.id);
   $('#detailPane').hidden = false;
+  requestAnimationFrame(() => {
+    autoFitTextarea($('#detailText'));
+    autoFitTextarea($('#detailMemo'));
+    autoFitTextarea($('#detailHit'));
+  });
   if (currentView === 'list') renderList();
 }
 
@@ -703,7 +714,11 @@ function bindEvents() {
 
   // 上部の追加欄：押すと「内容」と「種類」が開く（task-board の .is-open と同じ）
   const addForm = $('#addForm');
-  addForm.addEventListener('focusin', () => addForm.classList.add('is-open'));
+  addForm.addEventListener('focusin', () => {
+    addForm.classList.add('is-open');
+    requestAnimationFrame(() => autoFitTextarea($('#addMemo')));
+  });
+  $('#addMemo').addEventListener('input', e => autoFitTextarea(e.target));
   document.addEventListener('pointerdown', e => {
     if (!addForm.contains(e.target)) {
       if (!$('#addText').value.trim() && !$('#addMemo').value.trim()) {
@@ -789,6 +804,7 @@ function bindEvents() {
   });
 
   $('#detailText').addEventListener('input', e => {
+    autoFitTextarea(e.target);
     const id = selectedNodeId;
     const val = e.target.value;
     if (!id) return;
@@ -799,6 +815,7 @@ function bindEvents() {
   });
 
   $('#detailMemo').addEventListener('input', e => {
+    autoFitTextarea(e.target);
     const id = selectedNodeId;
     const val = e.target.value;
     if (!id) return;
@@ -809,6 +826,7 @@ function bindEvents() {
   });
 
   $('#detailHit').addEventListener('input', e => {
+    autoFitTextarea(e.target);
     const id = selectedNodeId;
     const val = e.target.value;
     if (!id) return;
