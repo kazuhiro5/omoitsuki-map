@@ -1,0 +1,8 @@
+{
+  "name": "思いつきマップ",
+  "short_name": "思いつき",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F6F8FA",
+  "theme_color": "#1A7F37"
+}

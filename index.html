@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>思いつきマップ</title>
+  <meta name="theme-color" content="#1A7F37">
+  <script>
+    try {
+      var t = localStorage.getItem('om.theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="思いつきマップ">
+  <link rel="stylesheet" href="./css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+  <script type="module" src="./js/app.js"></script>
+</head>
+<body>
+  <p id="loading" class="loading">読み込み中…</p>
+
+  <section id="login" class="login" hidden>
+    <h1>思いつきマップ</h1>
+    <p>この端末で初めて開く時だけ、Googleでログインします。</p>
+    <button id="signInBtn" type="button" class="btn btn-primary">Googleでログイン</button>
+    <p id="loginError" class="error" role="alert"></p>
+  </section>
+
+  <div id="appRoot" style="display:flex;flex-direction:column;flex:1;min-height:0;" hidden>
+    <header class="top">
+      <span class="top-brand">思いつきマップ</span>
+      <div class="top-right">
+        <span id="userStatus"></span>
+        <details class="menu-wrap">
+          <summary aria-label="メニュー">⋯</summary>
+          <div class="menu-pop">
+            <div>
+              <div class="label">明るさ</div>
+              <div class="seg" id="theme-seg">
+                <button type="button" data-theme="" aria-pressed="true">端末に合わせる</button>
+                <button type="button" data-theme="light" aria-pressed="false">明るい</button>
+                <button type="button" data-theme="dark" aria-pressed="false">暗い</button>
+              </div>
+            </div>
+            <button id="signOutBtn" type="button" class="btn">ログアウト</button>
+          </div>
+        </details>
+      </div>
+    </header>
+
+    <div class="page" id="pageRoot">
+      <!-- たたんだ時の左帯 -->
+      <div class="side-rail" id="sideRail" hidden>
+        <button type="button" class="side-toggle" id="openSideBtn" aria-label="左の欄をひらく" title="ひらく">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M9 4v16M14 10l2 2-2 2" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- PCの左一覧（表示切替・種類・状態・ヒットメモ絞り込み） -->
+      <aside class="side" id="sidePane" aria-label="表示と絞り込み">
+        <div class="side-head-row">
+          <span class="side-label" style="padding:0;">画面</span>
+          <button type="button" class="side-toggle" id="closeSideBtn" aria-label="左の欄をたたむ" title="たたむ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M9 4v16M16 10l-2 2 2 2" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="side-sec">
+          <button type="button" class="side-item is-active" data-view-nav="list">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+            <span>リスト</span>
+            <span class="side-count" id="countAll">0</span>
+          </button>
+          <button type="button" class="side-item" data-view-nav="graph">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5l7 0M7.5 8.5l3 7M16.5 8.5l-3 7"/></svg>
+            <span>関係図</span>
+          </button>
+        </div>
+
+        <div class="side-sec" id="sideTypeSec">
+          <div class="side-label">種類</div>
+          <button type="button" class="side-item is-active" data-ftype="all">
+            <span>すべて</span>
+          </button>
+          <button type="button" class="side-item" data-ftype="疑問">
+            <i class="dot" style="background:var(--ask)"></i><span>疑問</span>
+            <span class="side-count" data-count-type="疑問">0</span>
+          </button>
+          <button type="button" class="side-item" data-ftype="やること">
+            <i class="dot" style="background:var(--person)"></i><span>やること</span>
+            <span class="side-count" data-count-type="やること">0</span>
+          </button>
+          <button type="button" class="side-item" data-ftype="整理">
+            <i class="dot" style="background:var(--b5)"></i><span>整理</span>
+            <span class="side-count" data-count-type="整理">0</span>
+          </button>
+        </div>
+
+        <div class="side-sec" id="sideStatusSec">
+          <div class="side-label">状態</div>
+          <button type="button" class="side-item is-active" data-fstatus="all">
+            <span>すべて</span>
+          </button>
+          <button type="button" class="side-item" data-fstatus="未着手">
+            <span>未着手</span>
+            <span class="side-count" data-count-status="未着手">0</span>
+          </button>
+          <button type="button" class="side-item" data-fstatus="チェック済み">
+            <i class="dot" style="background:var(--person)"></i><span>チェック済み</span>
+            <span class="side-count" data-count-status="チェック済み">0</span>
+          </button>
+          <button type="button" class="side-item" data-fstatus="理解済み">
+            <i class="dot" style="background:var(--accent)"></i><span>理解済み</span>
+            <span class="side-count" data-count-status="理解済み">0</span>
+          </button>
+        </div>
+
+        <div class="side-sec">
+          <div class="side-label">刺さった記録</div>
+          <button type="button" class="side-item" id="sideHitBtn">
+            <i class="dot" style="background:var(--warn)"></i><span>ヒットメモあり</span>
+            <span class="side-count" id="countHit">0</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 右のメイン作業場 -->
+      <main class="work">
+        <!-- いつでも1行で素早く書ける入力欄（リスト・関係図共通） -->
+        <section class="write-bar" aria-label="思いつきを足す">
+          <form class="add-form" id="addForm">
+            <div class="add-line">
+              <input type="text" id="addText" class="add-input" placeholder="思いついたことを書いて Enter…" required autocomplete="off">
+              <button type="submit" class="btn btn-primary">追加</button>
+            </div>
+            <div class="add-meta" id="addTypeChips">
+              <span class="add-meta-label">種類：</span>
+              <button type="button" class="chip" data-atype="整理" aria-pressed="true">
+                <i class="dot" style="background:var(--b5)"></i>整理
+              </button>
+              <button type="button" class="chip" data-atype="疑問" aria-pressed="false">
+                <i class="dot" style="background:var(--ask)"></i>疑問
+              </button>
+              <button type="button" class="chip" data-atype="やること" aria-pressed="false">
+                <i class="dot" style="background:var(--person)"></i>やること
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ツールバー（リスト ⇔ 関係図の切り替え＋検索・グラフ操作） -->
+        <div class="toolbar" id="mainToolbar">
+          <div class="seg" aria-label="見せ方">
+            <button type="button" id="segListBtn" aria-pressed="true">リスト</button>
+            <button type="button" id="segGraphBtn" aria-pressed="false">関係図</button>
+          </div>
+
+          <!-- リスト用ツール -->
+          <input type="search" id="searchInput" class="search-input" placeholder="本文・ヒットメモで検索…">
+          <select id="sortSelect" class="sort-select" aria-label="並び替え">
+            <option value="updated">更新が新しい順</option>
+            <option value="created">追加が新しい順</option>
+            <option value="status">状態順（未着手→理解済み）</option>
+            <option value="type">種類順</option>
+          </select>
+
+          <!-- 関係図用ツール（関係図の時だけ表示） -->
+          <div class="seg" id="graphModeSeg" hidden>
+            <button type="button" id="modeSelectBtn" aria-pressed="true">選ぶ・動かす</button>
+            <button type="button" id="modeLinkBtn" aria-pressed="false">線をつなぐ（2つ押す）</button>
+          </div>
+          <button type="button" class="btn" id="fitGraphBtn" hidden>全体を表示</button>
+          <button type="button" class="btn" id="layoutGraphBtn" hidden>並びを整える</button>
+        </div>
+
+        <!-- スマホ幅の時の絞り込みチップ -->
+        <div class="mobile-filters" id="mobileFilters">
+          <button type="button" class="chip" data-mtype="all" aria-pressed="true">すべて</button>
+          <button type="button" class="chip" data-mtype="疑問" aria-pressed="false"><i class="dot" style="background:var(--ask)"></i>疑問</button>
+          <button type="button" class="chip" data-mtype="やること" aria-pressed="false"><i class="dot" style="background:var(--person)"></i>やること</button>
+          <button type="button" class="chip" data-mtype="整理" aria-pressed="false"><i class="dot" style="background:var(--b5)"></i>整理</button>
+          <button type="button" class="chip" id="mobileHitBtn" aria-pressed="false"><i class="dot" style="background:var(--warn)"></i>ヒットあり</button>
+        </div>
+
+        <!-- 1. リスト画面（初期表示・メイン） -->
+        <div class="list-pane" id="listPane">
+          <div class="tb-cards" id="cardList"></div>
+        </div>
+
+        <!-- 2. 関係図画面 -->
+        <div class="graph-pane" id="graphPane" hidden>
+          <div id="cy"></div>
+
+          <div class="link-banner" id="linkBanner" hidden>
+            <span id="linkBannerText">つなぎたい1つ目のノードを押してください</span>
+            <button type="button" class="btn" id="cancelLinkBtn" style="min-height:28px;font-size:12px;">やめる</button>
+          </div>
+
+          <div class="legend">
+            <span class="legend-item"><i class="lg-box lg-todo"></i>未着手（破線）</span>
+            <span class="legend-item"><i class="lg-box lg-checked"></i>チェック済み（青）</span>
+            <span class="legend-item"><i class="lg-box lg-done"></i>理解済み（緑）</span>
+            <span class="legend-item"><i class="lg-box lg-hit"></i>ヒットメモあり（黄枠）</span>
+          </div>
+        </div>
+
+        <!-- 詳細・編集ペイン（リスト・関係図のどちらからでも右側に開く） -->
+        <aside class="detail-pane" id="detailPane" hidden>
+          <div class="detail-head">
+            <h3>思いつきの詳細・編集</h3>
+            <button type="button" class="detail-close" id="closeDetailBtn">閉じる</button>
+          </div>
+
+          <div class="pane-field">
+            <span class="pane-field-label">状態</span>
+            <div class="seg" id="detailStatusSeg">
+              <button type="button" data-val="未着手" aria-pressed="false">未着手</button>
+              <button type="button" data-val="チェック済み" aria-pressed="false">チェック済み</button>
+              <button type="button" data-val="理解済み" aria-pressed="false">理解済み</button>
+            </div>
+          </div>
+
+          <div class="pane-field">
+            <span class="pane-field-label">種類</span>
+            <div class="seg" id="detailTypeSeg">
+              <button type="button" data-val="整理" aria-pressed="false">整理</button>
+              <button type="button" data-val="疑問" aria-pressed="false">疑問</button>
+              <button type="button" data-val="やること" aria-pressed="false">やること</button>
+            </div>
+          </div>
+
+          <label class="pane-field">
+            <span class="pane-field-label">本文</span>
+            <textarea id="detailText" class="field" rows="3"></textarea>
+          </label>
+
+          <label class="pane-field hit-field">
+            <span class="pane-field-label">ヒットメモ（何にどう刺さったか）</span>
+            <textarea id="detailHit" class="field" rows="3" placeholder="別の思いつきや自分の考えに刺さった理由を書く"></textarea>
+          </label>
+
+          <div class="pane-field">
+            <span class="pane-field-label">つながっている思いつき（リンク）</span>
+            <ul class="pane-rels" id="detailLinks"></ul>
+            <div class="rel-add">
+              <select id="detailLinkSelect" aria-label="つなぐ相手を選ぶ"></select>
+              <button type="button" class="btn" id="addLinkBtn">＋ つなぐ</button>
+            </div>
+          </div>
+
+          <div class="detail-foot">
+            <span id="detailUpdated" style="font-size:12px;color:var(--muted);"></span>
+            <button type="button" class="btn-danger" id="deleteNodeBtn">削除</button>
+          </div>
+        </aside>
+      </main>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+</body>
+</html>
