@@ -12,6 +12,7 @@ const DEMO_NODES = [
   {
     id: 'n1',
     text: 'なぜ人は「正論」だけでは動かないのか？',
+    memo: '正しい指摘をしても相手が動かない場面が多い。感情や納得感のステップが必要なのではないか。',
     type: '疑問',
     status: '理解済み',
     hitMemo: 'ゼミの組織行動論と直結。「納得感」を作るプロセスこそがHRコンサルの価値だと気づいた。',
@@ -21,6 +22,7 @@ const DEMO_NODES = [
   {
     id: 'n2',
     text: '就活の軸：人と組織の「納得感」をつくる仕事',
+    memo: '外資のように数字や論理だけで切るより、人に焦点を当てる考え方（ノースサンドなど）が自分に合う。',
     type: '整理',
     status: 'チェック済み',
     hitMemo: '1人起業で仕組みを作る経験と、組織コンサルの志望理由が一本の線でつながった。',
@@ -30,6 +32,7 @@ const DEMO_NODES = [
   {
     id: 'n3',
     text: 'ノースサンドの社員インタビュー記事を3本読む',
+    memo: 'どういう場面でクライアントの納得感を作っているか具体例をメモする。',
     type: 'やること',
     status: '未着手',
     hitMemo: '',
@@ -39,6 +42,7 @@ const DEMO_NODES = [
   {
     id: 'n4',
     text: 'ルールを増やすと全体の遵守率が下がる（実測3.3個）',
+    memo: 'Binhi_hubの運用で分かったこと。絶対守るルールは4つに絞り、残りは仕組みで守る。',
     type: '整理',
     status: '理解済み',
     hitMemo: 'AIのルール設計だけでなく、会社のルール設計やタスク管理にもそのまま当てはまる。',
@@ -48,6 +52,7 @@ const DEMO_NODES = [
   {
     id: 'n5',
     text: 'マインドマップ（木構造）だと分野をまたぐ発見が起きにくい？',
+    memo: '親子の枝に分けると、別のテーマ同士の横のつながりが見えなくなる。自由につなげるグラフが必要。',
     type: '疑問',
     status: '未着手',
     hitMemo: '就活のメモとAI開発のメモが別々の枝に分かれてしまい、共通点に気づきにくかった。',
@@ -127,12 +132,13 @@ function genId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export async function addNode({ text, type = '整理', status = '未着手', hitMemo = '' }) {
+export async function addNode({ text, memo = '', type = '整理', status = '未着手', hitMemo = '' }) {
   const now = Date.now();
   const id = genId('n');
   const item = {
     id,
     text: text.trim(),
+    memo: memo.trim(),
     type,
     status,
     hitMemo: hitMemo.trim(),
@@ -147,6 +153,7 @@ export async function addNode({ text, type = '整理', status = '未着手', hit
   const ref = doc(db, 'users', currentUid, 'omoitsuki_nodes', id);
   await setDoc(ref, {
     text: item.text,
+    memo: item.memo,
     type: item.type,
     status: item.status,
     hitMemo: item.hitMemo,

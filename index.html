@@ -134,13 +134,14 @@
 
       <!-- 右のメイン作業場 -->
       <main class="work">
-        <!-- いつでも1行で素早く書ける入力欄（リスト・関係図共通） -->
+        <!-- 入力欄（task-board と同じ：ふだんは1行、押すとすぐ下に「内容」と「種類」が開く） -->
         <section class="write-bar" aria-label="思いつきを足す">
           <form class="add-form" id="addForm">
             <div class="add-line">
-              <input type="text" id="addText" class="add-input" placeholder="思いついたことを書いて Enter…" required autocomplete="off">
+              <input type="text" id="addText" class="add-input" placeholder="思いつきを追加" aria-label="思いつき" required autocomplete="off">
               <button type="submit" class="btn btn-primary">追加</button>
             </div>
+            <textarea id="addMemo" class="add-memo" rows="2" placeholder="内容" aria-label="内容"></textarea>
             <div class="add-meta" id="addTypeChips">
               <span class="add-meta-label">種類：</span>
               <button type="button" class="chip" data-atype="整理" aria-pressed="true">
@@ -164,7 +165,7 @@
           </div>
 
           <!-- リスト用ツール -->
-          <input type="search" id="searchInput" class="search-input" placeholder="本文・ヒットメモで検索…">
+          <input type="search" id="searchInput" class="search-input" placeholder="タイトル・内容・ヒットメモで検索…">
           <select id="sortSelect" class="sort-select" aria-label="並び替え">
             <option value="updated">更新が新しい順</option>
             <option value="created">追加が新しい順</option>
@@ -190,7 +191,7 @@
           <button type="button" class="chip" id="mobileHitBtn" aria-pressed="false"><i class="dot" style="background:var(--warn)"></i>ヒットあり</button>
         </div>
 
-        <!-- 1. リスト画面（初期表示・メイン） -->
+        <!-- 1. リスト画面（初期表示・メイン：行を1回押すとすぐ下に「内容」が開いてその場で書き換えられる） -->
         <div class="list-pane" id="listPane">
           <div class="tb-cards" id="cardList"></div>
         </div>
@@ -219,6 +220,16 @@
             <button type="button" class="detail-close" id="closeDetailBtn">閉じる</button>
           </div>
 
+          <label class="pane-field">
+            <span class="pane-field-label">タイトル</span>
+            <input type="text" id="detailText" class="field">
+          </label>
+
+          <label class="pane-field">
+            <span class="pane-field-label">内容</span>
+            <textarea id="detailMemo" class="field" rows="4" placeholder="内容を書く"></textarea>
+          </label>
+
           <div class="pane-field">
             <span class="pane-field-label">状態</span>
             <div class="seg" id="detailStatusSeg">
@@ -237,14 +248,9 @@
             </div>
           </div>
 
-          <label class="pane-field">
-            <span class="pane-field-label">本文</span>
-            <textarea id="detailText" class="field" rows="3"></textarea>
-          </label>
-
           <label class="pane-field hit-field">
             <span class="pane-field-label">ヒットメモ（何にどう刺さったか）</span>
-            <textarea id="detailHit" class="field" rows="3" placeholder="別の思いつきや自分の考えに刺さった理由を書く"></textarea>
+            <textarea id="detailHit" class="field" rows="2" placeholder="別の思いつきや自分の考えに刺さった理由を書く"></textarea>
           </label>
 
           <div class="pane-field">

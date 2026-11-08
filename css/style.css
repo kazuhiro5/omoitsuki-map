@@ -188,7 +188,7 @@ button:not(:disabled):active, .chip:active, select:active {
   position: relative; overflow: hidden;
 }
 
-/* いつでもすぐ書ける入力欄（task-board の .add-form と同じ形） */
+/* いつでもすぐ書ける入力欄（task-board の .add-form と同じ：ふだんは1行、押すと内容と種類が開く） */
 .write-bar {
   padding: 12px 16px 8px; flex: none; max-width: 960px; width: 100%;
 }
@@ -205,10 +205,21 @@ button:not(:disabled):active, .chip:active, select:active {
 .add-input:focus {
   outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); background: var(--surface);
 }
+.add-memo {
+  width: 100%; padding: 8px 12px; font: inherit; font-size: 16px; line-height: 1.5;
+  color: var(--text); background: var(--bg); border: 1px solid var(--line);
+  border-radius: var(--radius-s); resize: vertical;
+}
+.add-memo:focus {
+  outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); background: var(--surface);
+}
 .add-meta {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
 }
 .add-meta-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+/* ふだんは1行目だけ。入力欄を押した時（.is-open）に内容と種類を開く（task-board 共通） */
+.add-form:not(.is-open) .add-memo,
+.add-form:not(.is-open) .add-meta { display: none; }
 
 /* ツールバー（リスト／関係図の切替＋検索・操作ボタン） */
 .toolbar {
@@ -240,12 +251,16 @@ button:not(:disabled):active, .chip:active, select:active {
 }
 .tb-cards { display: grid; gap: 6px; }
 .tb-card {
-  display: flex; align-items: stretch; min-width: 0;
+  display: flex; flex-wrap: wrap; align-items: stretch; min-width: 0;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
 }
 .tb-card:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.tb-card.is-expanded {
+  background: var(--accent-weak);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
 .tb-card.is-selected {
-  background: var(--accent-weak); border-color: var(--accent);
+  border-color: var(--accent);
 }
 /* 左の丸ボタン：押すたびに 未着手 → チェック済み（青） → 理解済み（緑） */
 .tb-check {
@@ -268,7 +283,9 @@ button:not(:disabled):active, .chip:active, select:active {
   flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;
   gap: 3px; padding: 8px 12px 8px 0; background: none; border: 0; text-align: left; cursor: pointer;
 }
-.tb-line { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.tb-line { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.tb-chev { display: none; flex: none; font-size: 12px; color: var(--accent); }
+.tb-card.is-expanded .tb-chev { display: inline; }
 .tb-title { flex: 1; min-width: 0; font-size: 15px; overflow-wrap: anywhere; }
 .tb-card[data-status="理解済み"] .tb-title { color: var(--muted); }
 .tb-meta {
@@ -298,6 +315,30 @@ button:not(:disabled):active, .chip:active, select:active {
   border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px;
   max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* 行を1回押した時にすぐ下に伸びて出る「内容」の書き換え欄（task-board のアコーディオン） */
+.tb-memo-box {
+  flex: 1 0 100%; min-width: 0; padding: 4px 12px 10px 42px;
+  display: grid; gap: 6px;
+}
+.tb-memo-edit {
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 15px; line-height: 1.55;
+  color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius-s); resize: vertical; min-height: 68px;
+}
+.tb-memo-edit:focus {
+  outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent);
+}
+.tb-memo-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 12px; color: var(--muted);
+}
+.tb-memo-more {
+  border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  border-radius: var(--radius-s); padding: 3px 10px; font-size: 12px; cursor: pointer;
+}
+.tb-memo-more:hover { border-color: var(--accent); color: var(--accent); }
+
 .empty-box {
   padding: 36px 16px; text-align: center; color: var(--muted); font-size: 14px;
   border: 1px dashed var(--line); border-radius: var(--radius); background: var(--surface);

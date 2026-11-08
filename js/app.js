@@ -12,7 +12,8 @@ let addType = '整理';
 let filterType = 'all';
 let filterStatus = 'all';
 let filterHitOnly = false;
-let selectedNodeId = null;
+let expandedNodeId = null; // リストで行を1回押して「内容」を開いている行のid（task-board の openId と同じ）
+let selectedNodeId = null; // 詳細ペインを開いているid
 
 // 関係図用の状態
 let cy = null;
@@ -22,7 +23,9 @@ let graphInitialized = false;
 
 // 入力デバウンス用タイマー
 let textTimer = null;
+let memoTimer = null;
 let hitTimer = null;
+let inlineMemoTimer = null;
 
 function typeColorVar(type) {
   if (type === '疑問') return 'var(--ask)';
@@ -196,8 +199,13 @@ function updateCounts() {
   $('#countHit').textContent = nodes.filter(n => n.hitMemo && n.hitMemo.trim()).length;
 }
 
-// ---- リスト画面の描画 ----
+// ---- リスト画面の描画（task-board と同じく、行を1回押すとすぐ下に「内容」が開いて書き換えられる） ----
 function renderList() {
+  // 行の中の「内容」欄を入力している最中は、カーソルが外れないようにリスト全体の描き直しを飛ばす
+  if (document.activeElement && document.activeElement.classList.contains('tb-memo-edit')) {
+    return;
+  }
+
   const container = $('#cardList');
   const nodes = getNodes();
   const links = getLinks();
@@ -207,7 +215,7 @@ function renderList() {
   let list = nodes.filter(n => {
     if (!matchesFilter(n)) return false;
     if (q) {
-      const hay = `${n.text || ''} ${n.hitMemo || ''}`.toLowerCase();
+      const hay = `${n.text || ''} ${n.memo || ''} ${n.hitMemo || ''}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -233,9 +241,13 @@ function renderList() {
   const byId = new Map(nodes.map(n => [n.id, n]));
 
   list.forEach(n => {
+    const isExpanded = expandedNodeId === n.id;
     const card = document.createElement('div');
-    card.className = 'tb-card' + (selectedNodeId === n.id ? ' is-selected' : '');
+    card.className = 'tb-card'
+      + (isExpanded ? ' is-expanded' : '')
+      + (selectedNodeId === n.id ? ' is-selected' : '');
     card.dataset.status = n.status;
+    card.dataset.id = n.id;
 
     // 左の丸ボタン（ワンタップで 未着手 → チェック済み → 理解済み）
     const checkBtn = document.createElement('button');
@@ -251,11 +263,23 @@ function renderList() {
       showToast(`状態を「${next}」に変えました`);
     });
 
-    // 本体（押すと詳細・編集ペインを開く）
+    // 本体（1回押すとすぐ下に「内容」が伸びて開き、開いている行をもう一度押すと右の詳細ペインが開く）
     const bodyBtn = document.createElement('button');
     bodyBtn.type = 'button';
     bodyBtn.className = 'tb-body';
-    bodyBtn.addEventListener('click', () => openDetail(n.id));
+    bodyBtn.setAttribute('aria-expanded', String(isExpanded));
+    bodyBtn.addEventListener('click', () => {
+      if (expandedNodeId === n.id) {
+        openDetail(n.id);
+        return;
+      }
+      expandedNodeId = n.id;
+      renderList();
+      requestAnimationFrame(() => {
+        const ta = container.querySelector(`.tb-card[data-id="${CSS.escape(n.id)}"] .tb-memo-edit`);
+        if (ta) ta.focus();
+      });
+    });
 
     const connected = links
       .filter(l => l.source === n.id || l.target === n.id)
@@ -270,21 +294,60 @@ function renderList() {
       ? `<div class="tb-hit">ヒット：${escapeHtml(n.hitMemo)}</div>`
       : '';
 
+    const hasMemo = !!(n.memo && n.memo.trim());
+
     bodyBtn.innerHTML = `
       <div class="tb-line">
         <span class="tb-title">${escapeHtml(n.text)}</span>
+        <span class="tb-chev" aria-hidden="true">▾</span>
       </div>
       ${hitHtml}
       ${pillsHtml}
       <div class="tb-meta">
         <span class="tb-type"><i class="dot" style="background:${typeColorVar(n.type)}"></i>${escapeHtml(n.type)}</span>
         <span class="tb-status-tag">${escapeHtml(n.status)}</span>
+        ${hasMemo && !isExpanded ? '<span>内容あり</span>' : ''}
         <span>${formatTime(n.updatedAt)}</span>
       </div>
     `;
 
     card.appendChild(checkBtn);
     card.appendChild(bodyBtn);
+
+    // 1回押した時にすぐ下に開く「内容」書き換え欄
+    if (isExpanded) {
+      const memoBox = document.createElement('div');
+      memoBox.className = 'tb-memo-box';
+
+      const memoTa = document.createElement('textarea');
+      memoTa.className = 'tb-memo-edit';
+      memoTa.rows = 3;
+      memoTa.placeholder = '内容を書く（自動で保存されます）';
+      memoTa.setAttribute('aria-label', '内容');
+      memoTa.value = n.memo || '';
+      memoTa.addEventListener('input', () => {
+        const val = memoTa.value;
+        clearTimeout(inlineMemoTimer);
+        inlineMemoTimer = setTimeout(() => {
+          updateNode(n.id, { memo: val });
+        }, 300);
+      });
+
+      const foot = document.createElement('div');
+      foot.className = 'tb-memo-foot';
+      foot.innerHTML = '<span>内容は自動で保存されます（もう一度タイトルを押すと詳細・リンク編集）</span>';
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'tb-memo-more';
+      moreBtn.textContent = '詳細・つなぐ';
+      moreBtn.addEventListener('click', () => openDetail(n.id));
+      foot.appendChild(moreBtn);
+
+      memoBox.appendChild(memoTa);
+      memoBox.appendChild(foot);
+      card.appendChild(memoBox);
+    }
+
     container.appendChild(card);
   });
 }
@@ -399,7 +462,6 @@ function syncGraph() {
   const nodeIds = new Set(nodes.map(n => n.id));
   const edgeIds = new Set(links.map(l => l.id));
 
-  // 消えた要素を取り除く
   cy.nodes().forEach(el => {
     if (!nodeIds.has(el.id())) cy.remove(el);
   });
@@ -440,7 +502,6 @@ function syncGraph() {
     }
   });
 
-  // 絞り込み反映
   const visibleIds = new Set();
   nodes.forEach(n => {
     const ok = matchesFilter(n);
@@ -520,6 +581,7 @@ function openDetail(id) {
   }
 
   $('#detailText').value = n.text || '';
+  $('#detailMemo').value = n.memo || '';
   $('#detailHit').value = n.hitMemo || '';
   $('#detailUpdated').textContent = '更新：' + formatTime(n.updatedAt);
 
@@ -609,9 +671,11 @@ function refreshViews() {
     if (!n) {
       closeDetail();
     } else {
-      // 編集中でなければ最新の状態・リンク一覧を反映
       if (document.activeElement !== $('#detailText')) {
         $('#detailText').value = n.text || '';
+      }
+      if (document.activeElement !== $('#detailMemo')) {
+        $('#detailMemo').value = n.memo || '';
       }
       if (document.activeElement !== $('#detailHit')) {
         $('#detailHit').value = n.hitMemo || '';
@@ -637,6 +701,22 @@ function bindEvents() {
     btn.addEventListener('click', () => switchView(btn.dataset.viewNav));
   });
 
+  // 上部の追加欄：押すと「内容」と「種類」が開く（task-board の .is-open と同じ）
+  const addForm = $('#addForm');
+  addForm.addEventListener('focusin', () => addForm.classList.add('is-open'));
+  document.addEventListener('pointerdown', e => {
+    if (!addForm.contains(e.target)) {
+      if (!$('#addText').value.trim() && !$('#addMemo').value.trim()) {
+        addForm.classList.remove('is-open');
+      }
+    }
+    // リストで開いている行の外を押したら閉じる
+    if (expandedNodeId && !e.target.closest?.('.tb-card.is-expanded, .detail-pane, .toast')) {
+      expandedNodeId = null;
+      renderList();
+    }
+  });
+
   // 追加フォームの種類選択
   $$('#addTypeChips .chip').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -648,13 +728,16 @@ function bindEvents() {
   });
 
   // 思いつき追加
-  $('#addForm').addEventListener('submit', async e => {
+  addForm.addEventListener('submit', async e => {
     e.preventDefault();
     const input = $('#addText');
+    const memoInput = $('#addMemo');
     const text = input.value.trim();
+    const memo = memoInput.value.trim();
     if (!text) return;
     input.value = '';
-    const created = await addNode({ text, type: addType });
+    memoInput.value = '';
+    const created = await addNode({ text, memo, type: addType });
     showToast('思いつきを追加しました');
     if (created && currentView === 'graph') {
       openDetail(created.id);
@@ -712,6 +795,16 @@ function bindEvents() {
     clearTimeout(textTimer);
     textTimer = setTimeout(() => {
       updateNode(id, { text: val });
+    }, 350);
+  });
+
+  $('#detailMemo').addEventListener('input', e => {
+    const id = selectedNodeId;
+    const val = e.target.value;
+    if (!id) return;
+    clearTimeout(memoTimer);
+    memoTimer = setTimeout(() => {
+      updateNode(id, { memo: val });
     }, 350);
   });
 
